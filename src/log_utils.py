@@ -1,6 +1,6 @@
 
 import re
-import datetime
+from datetime import datetime as datetime # lol
 
 def _build_w3c_regex():
     # ip addresses consist 4 dot seperated numbers that fall between 0 and 255
@@ -18,7 +18,7 @@ def _build_w3c_regex():
 
     # assume the time is everything between [ and ]. datetime will validate the
     # format later
-    time = r'\[(?P<time>\S*)\W.*\]'
+    time = r'\[(?P<timestamp>\S*)\W.*\]'
 
     # assume the request is everything between " and ". validate later.
     request = r'\"(?P<request>.*)\"'
@@ -34,55 +34,54 @@ def _build_w3c_regex():
             time + r'\W' + request + r'\W' + status + r'\W' + size)
 
 class LogItem(object):
-    def __init__(self, client, timestamp, request, status, size):
+    def __init__(
+            self, client, timestamp, method, resource, protocol, status, size):
+
         self.client = client
+        self.time = timestamp
 
-        # self.user_identifier = ''
-        # self.user_id = ''
-
-        # from the python docs, %z is a bad directive on some platforms. the
-        # time regex has been formated to only capture the date time string
-        # before the space and time zone information
-        self.time = datetime.datetime.strptime(timestamp, '%d/%b/%Y:%H:%M:%S')
-
-        request_components = request.split(' ')
         self.request = { }
-        self.request['method'] = request_components[0]
-        self.request['resource'] = request_components[1]
-        self.request['protocol'] = request_components[2]
+        self.request['method'] = method
+        self.request['resource'] = resource
+        self.request['protocol'] = protocol
 
-        self.status = None
-
-        self.size = 0
+        self.status = status
+        self.size = size
 
 class LogParser(object):
     def __init__(self):
         self.line_regex = _build_w3c_regex()
 
-    def parseLine(self, line):
+    def parse_line(self, line):
         match = re.match(self.line_regex, line)
        
-        # TODO add some logging here.
-        if not match:
-            print("no match!")
-            return None
+        # setup the timestamp using datetime
+        timestamp = datetime.strptime(
+                match.group('timestamp'), '%d/%b/%Y:%H:%M:%S')
 
-        try:
-            return LogItem(
-                    client=match.group('client'), timestamp=match.group('time'),
-                    request=match.group('request'),
-                    status=match.group('status'), size=match.group('size'))
+        # parse out the request. formated '<method> <resource> <protocol>'
+        request = match.group('request').split(' ')
 
-        except Exception as e:
-            print("error creating log entry %s" % e)
-            return None
+        # convert status and size strings to ints
+        status = int(match.group('status'))
+        size = int(match.group('size'))
+
+        return LogItem(
+                client=match.group('client'), timestamp=timestamp,
+                method=request[0], resource=request[1], protocol=request[2],
+                status=status, size=size)
 
 class LogTail(object):
     def __init__(self, filename):
         self.log = open(filename, 'r')
+        self.parser = LogParser()
 
-    def next_line(self):
+    def _parse_next_line(self):
         new_line = self.log.readline()
-        if new_line: return new_line
+        if new_line: return self.parser.parse_line(new_line)
         else: return None
 
+    def next_item(self):
+        while True:
+            try: return self._parse_next_line()
+            except Exception as e: print("error creating log entry %s" % e)

@@ -1,19 +1,21 @@
 import os
 import queue
 import time
-import datetime
+
+from datetime import datetime as datetime # lol
+from datetime import timedelta as timedelta 
 
 from log_utils import * 
 
 class Monitor(object):
     def __init__(self):
         # get the current time to base our triggers off of
-        self.now = datetime.datetime.now()
+        self.now = datetime.now()
 
         # Create a threshold queue that will hold LogItems in FIFO order. Items
         # will # be popped off the top if they are from before two minutes ago.
         # Keep a flag on the current threshold status.
-        self.threshold_delta = datetime.timedelta(minutes=2)
+        self.threshold_delta = timedelta(minutes=2)
         self.threshold_queue = queue.Queue()
         self.threshold = 20
         self.above_threshold = False
@@ -21,7 +23,7 @@ class Monitor(object):
         # Create a display list that will hold LogItems. Everytime the event
         # loop crosses the next_display time,  show some stats on display list,
         # clear the list, and set next_display to 10 seconds from the last one.
-        self.display_delta = datetime.timedelta(seconds=10)
+        self.display_delta = timedelta(seconds=10)
         self.next_display = self.now + self.display_delta
         self.display_list = [ ] 
 
@@ -45,11 +47,9 @@ class Monitor(object):
             a = "a"
 
 
-    def start_loop(self, line_generator):
-        parser = LogParser()
-
+    def start_loop(self, log_item_generator):
         while True:
-            self.now = datetime.datetime.now()
+            self.now = datetime.now()
 
             threshold_time = self.now - self.threshold_delta
             while not self.threshold_queue.empty() and \
@@ -71,16 +71,18 @@ class Monitor(object):
                 self.display_stats()
                 self.display_list = [ ]
 
-            line = line_generator.next_line()
-            if line:
-                state = parser.parseLine(line)
-                if state:
+            try:
+                log_item = log_item_generator.next_item()
+                if log_item:
                     print("added")
-                    self.threshold_queue.put(state)
-                    self.display_list.append(state)
-            else:
-                print(self.now.strftime("%A, %d. %B %Y %I:%M%p"))
-                time.sleep(2)
+                    self.threshold_queue.put(log_item)
+                    self.display_list.append(log_item)
+                else:
+                    print(self.now.strftime("%A, %d. %B %Y %I:%M%p"))
+                    time.sleep(2)
+            except Exception as e:
+                print("error creating log entry %s" % e)
+            
 
 if __name__ == '__main__':
     log_filename = os.path.join(
