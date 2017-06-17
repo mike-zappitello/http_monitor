@@ -2,7 +2,7 @@
 import re
 import datetime
 
-def build_w3c_regex():
+def _build_w3c_regex():
     # ip addresses consist 4 dot seperated numbers that fall between 0 and 255
     # without any leading zeros
     ip_num = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
@@ -57,7 +57,7 @@ class LogItem(object):
 
 class LogParser(object):
     def __init__(self):
-        self.line_regex = build_w3c_regex()
+        self.line_regex = _build_w3c_regex()
 
     def parseLine(self, line):
         match = re.match(self.line_regex, line)
@@ -76,3 +76,13 @@ class LogParser(object):
         except Exception as e:
             print("error creating log entry %s" % e)
             return None
+
+class LogTail(object):
+    def __init__(self, filename):
+        self.log = open(filename, 'r')
+
+    def next_line(self):
+        new_line = self.log.readline()
+        if new_line: return new_line
+        else: return None
+

@@ -3,16 +3,7 @@ import queue
 import time
 import datetime
 
-from parser import LogParser
-
-class LogTail(object):
-    def __init__(self, filename):
-        self.log = open(filename, 'r')
-
-    def next_line(self):
-        new_line = self.log.readline()
-        if new_line: return new_line
-        else: return None
+from log_utils import * 
 
 if __name__ == '__main__':
     log_filename = os.path.join(
