@@ -8,7 +8,7 @@ from datetime import timedelta as timedelta
 class Monitor(object):
     def __init__(self, log_item_generator):
         # object that will generate log items for display
-        self.log_item_generator = log_item_generator
+        self.log_item_generator = log_item_generator.next_item()
 
         # get the current time to base our triggers off of
         self.now = datetime.now()
@@ -100,7 +100,7 @@ class Monitor(object):
         # in the log file before the monitor began watching it. the monitor
         # should take an account of each of those items before watching for
         # new log items
-        log_item = self.log_item_generator.next_item()
+        log_item = next(self.log_item_generator)
         while log_item:
             # prepopulate the threshold queue and status list with the log item
             self.pre_populate_threshold(log_item)
@@ -111,18 +111,17 @@ class Monitor(object):
                 self.stats_list.append(log_item)
 
             # then get the next log item
-            log_item = self.log_item_generator.next_item()
+            log_item = next(self.log_item_generator)
 
         # update the display
         self.update_display()
-
 
     def start(self):
         while True:
             go_to_sleep = False
             self.now = datetime.now()
 
-            log_item = self.log_item_generator.next_item()
+            log_item = next(self.log_item_generator)
             if log_item: self.stats_list.append(log_item)
             else: go_to_sleep = True
 

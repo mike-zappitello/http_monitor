@@ -2,4 +2,5 @@
 *.pyc
 
 # ignore pycache folder
-src/__pycache__/
+http_monitor/__pycache__/
+test/__pycache__/
