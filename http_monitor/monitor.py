@@ -6,9 +6,12 @@ from datetime import datetime as datetime # lol
 from datetime import timedelta as timedelta 
 
 class Monitor(object):
-    def __init__(self, log_item_generator):
+    def __init__(self, log_item_generator, display):
         # object that will generate log items for display
-        self.log_item_generator = log_item_generator.next_item()
+        self.log_item_generator = log_item_generator
+
+        # object that holds the display information
+        self.display = display
 
         # get the current time to base our triggers off of
         self.now = datetime.now()
@@ -20,7 +23,6 @@ class Monitor(object):
         self.threshold_queue = queue.Queue()
         self.threshold = 2
         self.above_threshold = False
-        self.threshold_crosses = [ ]
 
         # Create a display list that will hold LogItems. Everytime the event
         # loop crosses the next_display time,  show some stats on display list,
@@ -30,29 +32,6 @@ class Monitor(object):
         self.stats_list = [ ] 
 
         self.pre_populate_data()
-
-    def get_threshold_time(self, log_item):
-        if log_item: return log_item.time - self.threshold_delta
-        return self.now - self.threshold_delta
-
-    def high_traffic_alert(self, start_time):
-        message =  "HIGH TRAFFIC ALERT\n\tHits = %s\n\tTriggered at %s" % \
-                (
-                    len(self.threshold_queue.queue),
-                    start_time.strftime("%A, %d. %B %Y %I:%M%p")
-                )
-        print(message)
-
-    def low_traffic_alert(self, expired_time):
-        message = "TRAFFIC ALERT OVER\n\tTriggered at %s" % \
-                expired_time.strftime("%A, %d. %B %Y %I:%M%p")
-        print(message)
-
-    def display_stats(self):
-        print("display stat")
-        # do some processing for display
-        for i, item in enumerate(self.stats_list):
-            a = "a"
 
     def prune_threshold_queue(self, threshold_time):
         # pop off elements of the queue from before threshold_time.
@@ -67,7 +46,8 @@ class Monitor(object):
 
             if self.above_threshold and self.threshold_queue.qsize() > self.threshold:
                 self.above_threshold = False
-                self.low_traffic_alert(expired_item.time + self.threshold_delta)
+                self.display.low_traffic_alert(
+                        expired_item.time + self.threshold_delta)
 
     def pre_populate_threshold(self, log_item):
         self.threshold_queue.put(log_item)
@@ -76,7 +56,7 @@ class Monitor(object):
         # if the threshold is newly surpassed create an event
         if self.threshold_queue.qsize() > self.threshold and not self.above_threshold:
             self.above_threshold = True
-            self.high_traffic_alert(log_item.time)
+            self.display.high_traffic_alert(log_item.time)
 
     def populate_threshold(self, log_item):
         if log_item: self.threshold_queue.put(log_item)
@@ -90,10 +70,11 @@ class Monitor(object):
         # happen if log item is added
         if self.threshold_queue.qsize() > self.threshold and not self.above_threshold:
             self.above_threshold = True
-            self.high_traffic_alert(log_item.time)
+            self.display.high_traffic_alert(log_item.time)
 
     def update_display(self):
-        print('update display!')
+        self.display.log_items = self.stats_list
+        self.display.update_display
 
     def pre_populate_data(self):
         # get the first item from the log generator. there may be multiple lines
