@@ -6,12 +6,12 @@ from datetime import datetime as datetime # lol
 from datetime import timedelta as timedelta 
 
 class Monitor(object):
-    def __init__(self, log_item_generator, display):
-        # object that will generate log items for display
-        self.log_item_generator = log_item_generator
+    def __init__(
+            self, log_item_generator, display, threshold, frequency, verbose):
 
-        # object that holds the display information
+        self.log_item_generator = log_item_generator
         self.display = display
+        self.verbose = verbose
 
         # get the current time to base our triggers off of
         self.now = datetime.now()
@@ -21,17 +21,20 @@ class Monitor(object):
         # Keep a flag on the current threshold status.
         self.threshold_delta = timedelta(minutes=2)
         self.threshold_queue = queue.Queue()
-        self.threshold = 2
+        self.threshold = threshold
         self.above_threshold = False
 
         # Create a display list that will hold LogItems. Everytime the event
         # loop crosses the next_display time,  show some stats on display list,
         # clear the list, and set next_display to 10 seconds from the last one.
-        self.display_delta = timedelta(seconds=10)
+        self.display_delta = timedelta(seconds=frequency)
         self.next_display = self.now + self.display_delta
         self.stats_list = [ ] 
 
         self.pre_populate_data()
+
+    def __log(self, message):
+        if self.verbose: print(message)
 
     def prune_threshold_queue(self, threshold_time):
         # pop off elements of the queue from before threshold_time.
@@ -74,7 +77,7 @@ class Monitor(object):
 
     def update_display(self):
         self.display.log_items = self.stats_list
-        self.display.update_display
+        self.display.update_display()
 
     def pre_populate_data(self):
         # get the first item from the log generator. there may be multiple lines
@@ -117,5 +120,5 @@ class Monitor(object):
                 self.stats_list = [ ]
 
             if go_to_sleep:
-                print('zzz')
+                self.__log('zzz')
                 time.sleep(1)
