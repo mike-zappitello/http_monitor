@@ -2,26 +2,25 @@
 from datetime import datetime as datetime # lol
 
 class Display(object):
+
     def __init__(self):
         self.time_fmt = "%A, %d. %B %Y %I:%M%p"
-        self.log_items = [ ]
+        self.monitor = None
 
-    def high_traffic_alert(self, start_time):
-        message =  "HIGH TRAFFIC ALERT\n\tTriggered at %s" % \
-                start_time.strftime(self.time_fmt)
-        print(message)
+    def set_monitor(self, monitor):
+        self.monitor = monitor 
+        self.update_display()
 
-    def low_traffic_alert(self, expired_time):
-        message = "TRAFFIC ALERT OVER\n\tTriggered at %s" % \
-                expired_time.strftime(self.time_fmt)
-        print(message)
+    def high_traffic_alert(self):
+        alert = self.monitor.get_latest_alert()
+        time = alert.start_time.strftime(self.time_fmt)
+        print("HIGH TRAFFIC ALERT: Triggered at %s" % time)
+
+    def low_traffic_alert(self):
+        alert = self.monitor.get_latest_alert()
+        time = alert.end_time.strftime(self.time_fmt)
+        print("TRAFFIC ALERT OVER: Expired at %s\n" % time)
 
     def update_display(self):
-        print("update display")
-
-    def display_stats(self):
-        print("display stat")
-        # do some processing for display
-        for i, item in enumerate(self.log_items):
-            a = "a"
+        print("update_display")
 

@@ -1,16 +1,38 @@
 
-import queue
 import time
 
-from datetime import datetime as datetime # lol
+from datetime import datetime as datetime   # lol
 from datetime import timedelta as timedelta 
+from queue import Queue as Queue            # lol
 
 class Monitor(object):
+    class _Alert(object):
+
+        def __init__(self, start_time):
+            self.start_time = start_time
+            self.end_time = None 
+            self.hits = 1
+
+        def active(self): return self.end_time == None
+        def add_hit(self): self.hits += 1
+        def end(self, end_time): self.end_time = end_time
+
+        def duration(self):
+            if self.end_time: return self.end_time - self.start_time
+            return datetime.now() - self.start_time
+
+        def ongoing(self):
+            if self.end_time: return True
+            return False
+
+
     def __init__(
-            self, log_item_generator, display, threshold, frequency, verbose):
+            self, log_item_generator, display, threshold=2, frequency=2,
+            verbose=False):
 
         self.log_item_generator = log_item_generator
         self.display = display
+        display.set_monitor(self)
         self.verbose = verbose
 
         # get the current time to base our triggers off of
@@ -20,9 +42,9 @@ class Monitor(object):
         # will # be popped off the top if they are from before two minutes ago.
         # Keep a flag on the current threshold status.
         self.threshold_delta = timedelta(minutes=2)
-        self.threshold_queue = queue.Queue()
+        self.threshold_queue = Queue()
         self.threshold = threshold
-        self.above_threshold = False
+        self.alerts = [ ] 
 
         # Create a display list that will hold LogItems. Everytime the event
         # loop crosses the next_display time,  show some stats on display list,
@@ -36,6 +58,13 @@ class Monitor(object):
     def __log(self, message):
         if self.verbose: print(message)
 
+    def get_latest_alert(self): return self.alerts[-1]
+
+    def active_alert(self):
+        if len(self.alerts) > 0 and self.alerts[-1].active():
+            return self.alerts[-1]
+        return None
+
     def prune_threshold_queue(self, threshold_time):
         # pop off elements of the queue from before threshold_time.
         #
@@ -44,22 +73,26 @@ class Monitor(object):
         while not self.threshold_queue.empty() and \
                 self.threshold_queue.queue[0].time < threshold_time:
 
+            self.__log('pop off hit')
+
             # pop off expired item
             expired_item = self.threshold_queue.get()
 
-            if self.above_threshold and self.threshold_queue.qsize() > self.threshold:
-                self.above_threshold = False
-                self.display.low_traffic_alert(
-                        expired_item.time + self.threshold_delta)
+            if self.active_alert() and  self.threshold_queue.qsize() > self.threshold:
+                self.active_alert().end(
+                        expired_item.time - self.threshold_delta)
+                self.display.low_traffic_alert()
 
     def pre_populate_threshold(self, log_item):
         self.threshold_queue.put(log_item)
         self.prune_threshold_queue(log_item.time - self.threshold_delta)
 
         # if the threshold is newly surpassed create an event
-        if self.threshold_queue.qsize() > self.threshold and not self.above_threshold:
-            self.above_threshold = True
-            self.display.high_traffic_alert(log_item.time)
+        if self.threshold_queue.qsize() > self.threshold:
+            if self.active_alert(): self.active_alert().add_hit()
+            else: 
+                self.alerts.append(self._Alert(log_item.time))
+                self.display.high_traffic_alert()
 
     def populate_threshold(self, log_item):
         if log_item: self.threshold_queue.put(log_item)
@@ -71,9 +104,10 @@ class Monitor(object):
 
         # if the threshold is newly surpassed create an event this will only
         # happen if log item is added
-        if self.threshold_queue.qsize() > self.threshold and not self.above_threshold:
-            self.above_threshold = True
-            self.display.high_traffic_alert(log_item.time)
+        if self.threshold_queue.qsize() > self.threshold:
+            if self.active_alert(): self.active_alert().add_hit()
+            else: 
+                self.alerts.append(sel._Alert(log_item.time))
 
     def update_display(self):
         self.display.log_items = self.stats_list
@@ -120,5 +154,5 @@ class Monitor(object):
                 self.stats_list = [ ]
 
             if go_to_sleep:
-                self.__log('zzz')
+                # self.__log('zzz')
                 time.sleep(1)
