@@ -105,7 +105,7 @@ class Monitor(object):
                 self.display.high_traffic_alert()
 
     def update_display(self):
-        self.display.log_items = self.stats_list
+        self.display.latest_hits= self.stats_list
         self.display.update_display()
 
     def pre_populate_data(self):

@@ -84,4 +84,6 @@ class LogTail(object):
     def next_item(self):
         while True:
             try: yield self._parse_next_line()
-            except Exception as e: print("error creating log entry %s" % e)
+            except Exception as e:
+                _ = e
+                # print("error creating log entry %s" % e)

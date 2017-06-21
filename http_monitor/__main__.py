@@ -1,11 +1,12 @@
 """ HTTP Console Monitor """
 import argparse
-import sys
+import curses
 import os
+import sys
 
+from display import Display
 from log_utils import * 
 from monitor import Monitor
-from display import Display
 
 def parse_args(argv):
     def file_exists_helper(filepath):
@@ -29,13 +30,11 @@ def parse_args(argv):
 
     return parser.parse_args(args=argv)
 
-def main(argv):
+def main(screen, argv):
     args = parse_args(argv)
 
-    print(args)
-
     logger = LogTail(args.logfile)
-    display = Display()
+    display = Display(screen)
 
     monitor = Monitor(
             log_item_generator=logger.next_item(), display=display,
@@ -43,4 +42,10 @@ def main(argv):
 
     monitor.start()
 
-if __name__ == '__main__': main(argv=sys.argv[1:])
+if __name__ == '__main__':
+    # get argv using sys
+    argv = sys.argv[1:]
+
+    # wrap main in curses.wrapper so that terminal will be restored to the
+    # origional state should something go wrong.
+    curses.wrapper(main, argv)
