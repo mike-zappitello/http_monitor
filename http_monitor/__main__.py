@@ -27,10 +27,6 @@ def parse_args(argv):
             '-f', dest='frequency', default=10, type=int,
             help='integer frequency of status updates in seconds')
 
-    parser.add_argument(
-            '-v', '--verbose', dest='verbose', default=False,
-            action='store_true', help='verbose logging')
-
     return parser.parse_args(args=argv)
 
 def main(argv):
@@ -43,8 +39,7 @@ def main(argv):
 
     monitor = Monitor(
             log_item_generator=logger.next_item(), display=display,
-            threshold=args.threshold, frequency=args.frequency,
-            verbose=args.verbose)
+            threshold=args.threshold, frequency=args.frequency)
 
     monitor.start()
 

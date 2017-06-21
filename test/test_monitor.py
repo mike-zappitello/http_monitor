@@ -2,12 +2,16 @@
 import time
 import unittest
 
-from datetime import datetime as datetime # lol
+from datetime import datetime as datetime   # lol
 from datetime import timedelta as timedelta 
+from queue import Queue as Queue            # lol
 
 from http_monitor import monitor 
 from http_monitor import log_utils
 from http_monitor import display
+
+def LOG(message):
+    if False: print(message)
 
 class MockLogItemGenerator(object):
     def __init__(self):
@@ -23,47 +27,95 @@ class MockLogItemGenerator(object):
                 resource='/sql/index.php', protocol='HTTP/1.1', status=200,
                 size=1234)
 
-    def generate_items(self, amount):
-        print('generate items')
-        count = 0
-        while count < amount:
-            yield self.generate_item(datetime.now())
-            count += 1
-
-    def generate_nones(self, amount):
-        print('generate nones')
-        count = 0
-        while count < amount:
-            yield None
-            count += 1
-
     def next_item(self):
         for time in self.schedule:
-            while datetime.now() < time:
-                print('none')
-                yield None
-            print('item')
+            while datetime.now() < time: yield None
+            LOG('item: %s' % time)
             yield self.generate_item(time)
 
 class MockDisplay(object):
 
+    class _Expected_Alert(object):
+        def __init__(self, time):
+            self.expected_start = time
+            self.expected_end = None
+
+        def __assert_similar_time(self, expected, real):
+            LOG("expected: %s" % expected)
+            LOG("real:     %s" % real)
+            assert(real.hour == expected.hour)
+            assert(real.minute == expected.minute)
+            assert(real.second == expected.second)
+
+        def set_end(self, time):
+            self.expected_end = time
+
+        def start(self, time):
+            self.__assert_similar_time(self.expected_start, time)
+
+        def end(self, time):
+            self.__assert_similar_time(self.expected_end, time)
+
     def __init__(self):
-        self.schedule = [ ]
+        self.expected_alerts = Queue()
         self.display_updates = 0
         self.monitor = None
+        self.threshold = 1
 
-    def set_schedule(self, schedule):
-        self.schedule = schedule
+    def set_schedule(self, schedule, threshold, threshold_s):
+        if len(schedule) < threshold: return
+
+        length = timedelta(seconds=threshold_s, microseconds=5)
+        alert = None
+
+        head = 0
+        tail = 0
+
+        while head < len(schedule):
+            LOG("[%s]: %s" % (head, schedule[head]))
+            LOG("p - h:%s, t:%s" % (head, tail))
+            while schedule[head] - schedule[tail] > length:
+                LOG("w - h:%s, t:%s" % (head, tail))
+                tail += 1
+                if head - 1 - tail < threshold and alert:
+                    LOG("alert off - %s" % (schedule[tail] + length))
+                    alert.set_end(schedule[tail] + length)
+                    self.expected_alerts.put(alert)
+                    alert = None
+
+            if head - tail + 1 >= threshold and alert == None:
+                LOG("alert on  - %s" % schedule[head])
+                alert = self._Expected_Alert(schedule[head])
+
+            head += 1
+
+        if alert:
+            self.expected_alerts.put(alert)
+            return 1
+
+        return 0
+
+        LOG("\ncurrently %s alerts left\n" % self.expected_alerts.qsize())
 
     def set_monitor(self, monitor):
         self.monitor = monitor
 
-    def high_traffic_alert(self): print('high traffic')
-    def low_traffic_alert(self): print('low traffic')
+    def high_traffic_alert(self):
+        LOG('high traffic')
+        real = self.monitor.get_latest_alert()
+        expected = self.expected_alerts.queue[0]
+
+        expected.start(real.start_time)
+
+    def low_traffic_alert(self):
+        LOG('low traffic')
+        real = self.monitor.get_latest_alert()
+        expected = self.expected_alerts.get()
+
+        expected.end(real.end_time)
+
     def update_display(self):
-        self.display_updates += 1
-        for alert in self.monitor.alerts:
-            print(alert.hits)
+        LOG("currently %s alerts left" % self.expected_alerts.qsize())
 
 class MonitorTest(unittest.TestCase):
     
@@ -72,21 +124,54 @@ class MonitorTest(unittest.TestCase):
         self.display = MockDisplay()
 
     def create_schedule(self, timedeltas):
-        return [ datetime.now() + timedelta(seconds=seconds)
-                 for seconds in timedeltas ]
+        now = datetime.now()
+        return [ now + timedelta(seconds=seconds) for seconds in timedeltas ]
 
+    def run_test(self, schedule, threshold, threshold_s):
+        self.log_item_generator.set_schedule(schedule)
+
+        active_alerts = self.display.set_schedule(
+                schedule, threshold, threshold_s)
+
+        try:
+            self.monitor = monitor.Monitor(
+                    self.log_item_generator.next_item(), self.display,
+                    threshold=threshold, threshold_s=threshold_s, frequency=10)
+            self.monitor.start()
+        except StopIteration as e: _ = 'we reached the end of the schedule'
+
+        self.assertEqual(self.display.expected_alerts.qsize(), active_alerts)
 
     def test_monitor(self):
-        timedeltas = [ 1, 1, 1, 1, 1, 121 ]
+        timedeltas = [ 0, 0, 2, 4, 6, 8, 10, 30 ]
+
+        self.run_test(
+            schedule = self.create_schedule(timedeltas), threshold = 5,
+            threshold_s = 10)
+
+    def test_multiple_prealerts(self):
+        timedeltas = [
+                -20, -20, -20, -20, -20,    # 5 quick events to create an alert
+                -10,                        # enough time to let them go
+                -5, -5, -5, -5 ]            # trigger another alert
+
+        print(len(timedeltas))
+
+        self.run_test(
+            schedule = self.create_schedule(timedeltas), threshold = 5,
+            threshold_s = 10)
+
+    def test_recent_prealerts(self):
+        timedeltas = [
+                -4, -3, -2, -2, -2,         # prime logs with early events
+                1, 1.5, 2, 2.5, 3, 4,       # trigger while running
+                10, 12, 14, 16 ]            # puase and trigger another alert
+
         schedule = self.create_schedule(timedeltas)
+        self.run_test(schedule, threshold=6, threshold_s=6)
 
-        self.log_item_generator.set_schedule(schedule)
-        self.display.set_schedule(schedule)
+    def test_for_scale(self):
+        timedeltas =  [ 0 ]
 
-        self.monitor = monitor.Monitor(
-                self.log_item_generator.next_item(), self.display, threshold=5,
-                frequency=10, verbose=True)
-
-        self.monitor.start()
 
 if __name__ == '__main__': unittest.main()

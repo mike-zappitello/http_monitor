@@ -27,13 +27,12 @@ class Monitor(object):
 
 
     def __init__(
-            self, log_item_generator, display, threshold=2, frequency=2,
-            verbose=False):
+            self, log_item_generator, display, threshold=2, threshold_s=120,
+            frequency=2):
 
         self.log_item_generator = log_item_generator
         self.display = display
         display.set_monitor(self)
-        self.verbose = verbose
 
         # get the current time to base our triggers off of
         self.now = datetime.now()
@@ -41,7 +40,7 @@ class Monitor(object):
         # Create a threshold queue that will hold LogItems in FIFO order. Items
         # will # be popped off the top if they are from before two minutes ago.
         # Keep a flag on the current threshold status.
-        self.threshold_delta = timedelta(minutes=2)
+        self.threshold_delta = timedelta(seconds=threshold_s)
         self.threshold_queue = Queue()
         self.threshold = threshold
         self.alerts = [ ] 
@@ -55,9 +54,6 @@ class Monitor(object):
 
         self.pre_populate_data()
 
-    def __log(self, message):
-        if self.verbose: print(message)
-
     def get_latest_alert(self): return self.alerts[-1]
 
     def active_alert(self):
@@ -70,25 +66,23 @@ class Monitor(object):
         #
         # if an alert has been started, end it if the queue falls below the
         # threshold size
+        expired_item = None
         while not self.threshold_queue.empty() and \
                 self.threshold_queue.queue[0].time < threshold_time:
-
-            self.__log('pop off hit')
 
             # pop off expired item
             expired_item = self.threshold_queue.get()
 
-            if self.active_alert() and  self.threshold_queue.qsize() > self.threshold:
-                self.active_alert().end(
-                        expired_item.time - self.threshold_delta)
-                self.display.low_traffic_alert()
+        if self.active_alert() and self.threshold_queue.qsize() < self.threshold:
+            self.active_alert().end(expired_item.time + self.threshold_delta)
+            self.display.low_traffic_alert()
 
     def pre_populate_threshold(self, log_item):
         self.threshold_queue.put(log_item)
         self.prune_threshold_queue(log_item.time - self.threshold_delta)
 
         # if the threshold is newly surpassed create an event
-        if self.threshold_queue.qsize() > self.threshold:
+        if self.threshold_queue.qsize() == self.threshold:
             if self.active_alert(): self.active_alert().add_hit()
             else: 
                 self.alerts.append(self._Alert(log_item.time))
@@ -104,10 +98,11 @@ class Monitor(object):
 
         # if the threshold is newly surpassed create an event this will only
         # happen if log item is added
-        if self.threshold_queue.qsize() > self.threshold:
+        if self.threshold_queue.qsize() >= self.threshold:
             if self.active_alert(): self.active_alert().add_hit()
-            else: 
-                self.alerts.append(sel._Alert(log_item.time))
+            else:
+                self.alerts.append(self._Alert(log_item.time))
+                self.display.high_traffic_alert()
 
     def update_display(self):
         self.display.log_items = self.stats_list
@@ -154,5 +149,4 @@ class Monitor(object):
                 self.stats_list = [ ]
 
             if go_to_sleep:
-                # self.__log('zzz')
-                time.sleep(1)
+                time.sleep(0.1)
