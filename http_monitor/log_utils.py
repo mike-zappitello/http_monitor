@@ -1,6 +1,12 @@
 
+import logging
+import os
 import re
+
 from datetime import datetime as datetime # lol
+
+log_file = os.path.join('logs', 'meta.log')
+logging.basicConfig(filename=log_file, filemode='w')
 
 def _build_w3c_regex():
     # ip addresses consist 4 dot seperated numbers that fall between 0 and 255
@@ -48,42 +54,38 @@ class LogItem(object):
         self.status = status
         self.size = size
 
-class LogParser(object):
-    def __init__(self):
-        self.line_regex = _build_w3c_regex()
-
-    def parse_line(self, line):
-        match = re.match(self.line_regex, line)
-       
-        # setup the timestamp using datetime
-        timestamp = datetime.strptime(
-                match.group('timestamp'), '%d/%b/%Y:%H:%M:%S')
-
-        # parse out the request. formated '<method> <resource> <protocol>'
-        request = match.group('request').split(' ')
-
-        # convert status and size strings to ints
-        status = int(match.group('status'))
-        size = int(match.group('size'))
-
-        return LogItem(
-                client=match.group('client'), timestamp=timestamp,
-                method=request[0], resource=request[1], protocol=request[2],
-                status=status, size=size)
-
 class LogTail(object):
     def __init__(self, filename):
         self.log = open(filename, 'r')
-        self.parser = LogParser()
+        self.line_regex = _build_w3c_regex()
+        self.new_line = None
 
     def _parse_next_line(self):
-        new_line = self.log.readline()
-        if new_line: return self.parser.parse_line(new_line)
-        else: return None
+        self.new_line = self.log.readline()
+        if self.new_line:
+            match = re.match(self.line_regex, self.new_line)
+           
+            # setup the timestamp using datetime
+            timestamp = datetime.strptime(
+                    match.group('timestamp'), '%d/%b/%Y:%H:%M:%S')
+
+            # parse out the request. formated '<method> <resource> <protocol>'
+            request = match.group('request').split(' ')
+
+            # convert status and size strings to ints
+            status = int(match.group('status'))
+            size = int(match.group('size'))
+
+            return LogItem(
+                    client=match.group('client'), timestamp=timestamp,
+                    method=request[0], resource=request[1], protocol=request[2],
+                    status=status, size=size)
+        else:
+            return None
 
     def next_item(self):
         while True:
             try: yield self._parse_next_line()
             except Exception as e:
-                _ = e
-                # print("error creating log entry %s" % e)
+                logging.error("Encountered error\n\t%s\n\t%s" % (self.new_line,
+                    e))

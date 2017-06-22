@@ -78,6 +78,11 @@ class Display(object):
             start_x = int(((xs[3] + xs[4]) / 2) - len(col4) / 2)
             self.screen.addstr(y, start_x, col4)
 
+    def _get_popular_section(self):
+        popularity = { }
+        for url in self.latest_hits:
+            section = "a"
+
     def set_monitor(self, monitor):
         self.monitor = monitor 
         self.update_display()
