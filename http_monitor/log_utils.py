@@ -79,9 +79,14 @@ class LogItem(object):
         self.size = size
 
     def __lt__(self, y):
+        ''' built in function for sorting '''
         return self.get_section() < y.get_section()
 
     def get_section(self):
+        '''
+        get the section item from the request resource url. if it exists, cache
+        it. if it doesn't, cache an empty string.
+        '''
         if self.section: return self.section
 
         self.section = parse_section(self.request['resource'])
@@ -94,6 +99,10 @@ class LogTail(object):
         self.new_line = None
 
     def _parse_next_line(self):
+        '''
+        get the next line from the log. if a new line has appeared return a new
+        LogItem. if not, return None
+        '''
         self.new_line = self.log.readline()
         if self.new_line:
             match = re.match(self.line_regex, self.new_line)
@@ -121,6 +130,13 @@ class LogTail(object):
             return None
 
     def next_item(self):
+        ''' 
+        generator function for accessing the next item in the log as it appears. 
+
+        wrap in a try except block that will log exceptions as the are raised.
+        they will most likely be parsing errors from bad log lines or borked
+        parsing.
+        '''
         while True:
             try: yield self._parse_next_line()
             except Exception as e:

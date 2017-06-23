@@ -52,9 +52,14 @@ class Display(object):
         self.screen.refresh()
 
     def _add_full_row(self, y, char="*"):
+        ''' add a row of a repeating char in row y '''
         for x in range(0, self.width): self.screen.addstr(y, x, char)
 
     def _add_to_table(self, y, col1='', col2='', col3='', col4=''):
+        '''
+        add elements to a row y. for any column to be written, esase what is
+        already there and replace it with a string.
+        '''
         col_width = int(self.width / 4) - 1
         xs = [ n + n * col_width for n in range(0, 5) ]
 
@@ -82,6 +87,7 @@ class Display(object):
             self.screen.addstr(y, start_x, col4)
 
     def _get_popular_section(self):
+        ''' sort the latest hits by section and return the most popular one. '''
         if len(self.latest_hits) == 0: return '  (0)'
 
         # sort the list, group them, and find the max one
@@ -103,6 +109,7 @@ class Display(object):
         self.update_display()
 
     def high_traffic_alert(self):
+        ''' durring a high traffic alert, add a new alert to the table '''
         alert = self.monitor.get_latest_alert()
         time = alert.start_time.strftime(self.time_fmt)
         hpm = "{0:.4f}".format(alert.hits / alert.duration().seconds * 60)
@@ -111,6 +118,10 @@ class Display(object):
         self.update_display()
 
     def low_traffic_alert(self):
+        '''
+        add an end time to the latest alert, increment the row index of the
+        table.
+        '''
         alert = self.monitor.get_latest_alert()
         time = alert.end_time.strftime(self.time_fmt)
         hpm = "{0:.4f}".format(alert.hits / alert.duration().seconds * 60)
@@ -121,6 +132,7 @@ class Display(object):
         self.update_display()
 
     def update_display(self):
+        ''' clear the bottom of the screen and update with some useful stats '''
         popular = self._get_popular_section()
         size = self._get_accumulated_size()
 

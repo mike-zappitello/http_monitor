@@ -1,5 +1,4 @@
 ## HTTP log monitoring console program
-======================================
 
 To Run: `python3.4 http_monitor./__main__.py -l <path/to_a/file.log>`
 
@@ -79,8 +78,10 @@ of improvements that could be made and one architecture expansion.
 
 * Display Improvements: This was my first time really working with the curses
   library. I found it to be appropriately named.
+  
   ** One of the obvious improvements would be to rerender the screen should the
       size of the window change.
+
   ** I would like to improve the way the screen is setup, dividing it into
       subwindows for each of the elements of the screen. Then each window could
       have its own cleanup and render functions that would make feature
@@ -90,22 +91,39 @@ of improvements that could be made and one architecture expansion.
   lacking. I planned on saving it for the end as I assumed it would be the most
   fun part of the assignment. Unfortunately, I was unable to really sink my
   teeth into it.
+
   ** HTTP Request sizes should display a minimum, maximum, average, and total;
       with respect to time, on a portion of the display that updates with each
       display update.
+
   ** In addition to displaying the most popular section since the last update, a
       running tally of the top 5 or 10 most popular sections should also be
       included, along with how many hits they've had. The begining of this work
       is already done in the `_get_popular_section()` function using the
       `groupby` method.
+
   ** Anamoly Detection on users, sizes, protocols, and status should be
       implimented to watch for anythin out of the ordinary.
+
+  ** There exists an issue that can arrise when the hits per minute fluctuates
+      about the threshold. I think that an alert should be turned off only after
+      the hits per minute has been below the threshold for a period of time
+      proportional to the length of the alert.
 
 * Functional Improvements: This project also uses the logging.py module to
   create a meta log of events that throw exceptions. I've tried to make the meat
   log clear, so that as exceptions are thrown they can be reviewed and
-  eliminatied from future iterations of this app. I've used pieces of that log
-  to expand the Parser Testing coverage.
+  eliminatied from future iterations of this app.
+  
+  ** Pieces of the meta log were used to expand the Parser Testing coverage.
+      That should continue as parsing errors are found.
+
+  ** Tests for the Display should be added that ensure it is calculating stats
+      correctly and that the screen is being updated correctly; perhaps with a
+      mock screen object.
+      
+  ** Tests for the Monitor should be expanded to test a wider variety of
+      situations.
 
 * Modular Log Consumption: This one is the most interesting to me personally. In
   addition to consuming the http logs and displaying information on them, it

@@ -29,6 +29,12 @@ class Monitor(object):
     def __init__(
             self, log_item_generator, display, threshold=2, threshold_s=120,
             frequency=2):
+        '''
+        create an object to watch items as they are generated from a
+        @log_item_generator. update a @display every @frequency seconds. alert
+        the display should the number of log items generated top @threshold
+        items over a corse of @threshold_s seconds.
+        '''
 
         self.log_item_generator = log_item_generator
         self.display = display
@@ -62,10 +68,12 @@ class Monitor(object):
         return None
 
     def prune_threshold_queue(self, threshold_time):
-        # pop off elements of the queue from before threshold_time.
-        #
-        # if an alert has been started, end it if the queue falls below the
-        # threshold size
+        '''
+        pop off elements of the queue from before threshold_time
+
+        if an alert has been started, end it if the queue falls below the 
+        threshold size
+        '''
         expired_item = None
         while not self.threshold_queue.empty() and \
                 self.threshold_queue.queue[0].time < threshold_time:
@@ -78,6 +86,10 @@ class Monitor(object):
             self.display.low_traffic_alert()
 
     def pre_populate_threshold(self, log_item):
+        '''
+        add log items from before the start of the monitor into the threshold
+        queue 
+        '''
         self.threshold_queue.put(log_item)
         self.prune_threshold_queue(log_item.time - self.threshold_delta)
 
@@ -89,6 +101,7 @@ class Monitor(object):
                 self.display.high_traffic_alert()
 
     def populate_threshold(self, log_item):
+        ''' add a new log item to the threshold queue and stats list '''
         if log_item: self.threshold_queue.put(log_item)
 
         # assuming with self.now that the log times are using the same clock as
@@ -109,10 +122,12 @@ class Monitor(object):
         self.display.update_display()
 
     def pre_populate_data(self):
-        # get the first item from the log generator. there may be multiple lines
-        # in the log file before the monitor began watching it. the monitor
-        # should take an account of each of those items before watching for
-        # new log items
+        '''
+        get the first item from the log generator. there may be multiple lines
+        in the log file before the monitor began watching it. the monitor
+        should take an account of each of those items before watching for new
+        log items
+        '''
         log_item = next(self.log_item_generator)
         while log_item:
             # prepopulate the threshold queue and status list with the log item
@@ -126,6 +141,7 @@ class Monitor(object):
         self.update_display()
 
     def start(self):
+        ''' begin watching the log for new items '''
         while True:
             go_to_sleep = False
             self.now = datetime.now()
