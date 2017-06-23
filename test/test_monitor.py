@@ -1,4 +1,5 @@
 
+import re
 import time
 import unittest
 
@@ -183,6 +184,39 @@ class MonitorTest(unittest.TestCase):
 
         schedule = self.create_schedule(timedeltas)
         self.run_alert_test(schedule, threshold=100, threshold_s=10)
+
+class ParserTest(unittest.TestCase):
+
+    def setUp(self):
+        self.line_regex = log_utils.build_w3c_regex()
+
+    def parse_line_for_url(self, line):
+        LOG(line)
+
+        match = re.match(self.line_regex, line)
+        self.assertIsNotNone(match, "Could not match line: %s" % line)
+
+        url = match.group('request').split(' ')[1]
+        LOG(url)
+
+        section = log_utils.parse_section(url) 
+        LOG(section)
+
+        self.assertIsNotNone(section)
+        LOG('')
+
+    def test_log_line_parseing(self):
+        lines = [
+            '240.200.12.8- - [28/Aug/1995:00:00:38 -0400] "GET http://www.google.com/pub/atomicbk/catalog/logo2.gif HTTP/1.0" 200 12871',
+            '46.246.37.67 - - [11/Jun/2017:13:00:01 +0000] "GET //pma/scripts/setup.php HTTP/1.1" 404 142 "-" "-"',
+            '46.246.37.67 - - [11/Jun/2017:13:00:01 +0000] "GET http://www.datadog.com/ HTTP/1.1" 404 142 "-" "-"',
+	    '123.45.67.8 - - [28/Aug/1995:00:01:52 -0400] "GET http://www.facebook.com/pub/tblake/www/aacc.gif HTTP/1.0" 304 -',
+	    '123.45.67.8 - - [28/Aug/1995:00:01:15 -0400] "GET http://www.facebook.com/pub/alweiner/cgi-bin/homepage.cgi?game HTTP/1.0" 200 -',
+        ]
+
+        for line in lines:
+            with self.subTest():
+                self.parse_line_for_url(line)
 
 
 if __name__ == '__main__': unittest.main()

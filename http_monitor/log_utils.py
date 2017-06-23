@@ -8,7 +8,7 @@ from datetime import datetime as datetime # lol
 log_file = os.path.join('logs', 'meta.log')
 logging.basicConfig(filename=log_file, filemode='w')
 
-def _build_w3c_regex():
+def build_w3c_regex():
     # ip addresses consist 4 dot seperated numbers that fall between 0 and 255
     # without any leading zeros
     ip_num = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
@@ -33,11 +33,33 @@ def _build_w3c_regex():
     status = r'(?P<status>[1-5][0-9][0-9])'
 
     # size is an int
-    size = r'(?P<size>[0-9]+)'
+    size = r'(?P<size>[0-9]+|-)'
 
     return re.compile(
             ip_address + r'\W' + user_identifier + r'\W' + user_id + r'\W' + 
             time + r'\W' + request + r'\W' + status + r'\W' + size)
+
+def parse_section(url):
+    try:
+        # rip off everything before the two forward slashes.
+        index = url.find('//')
+        the_rest = url[index + 2 : -1]
+
+        # if left with nothing, return None
+        if the_rest == '': return '' 
+
+        # easiest way i could use to find indecies of all '/' chars
+        forward_slashes  = [ i for i, ch in enumerate(the_rest) if ch == '/']
+
+        # if less than two '/' chars, we're done.
+        if len(forward_slashes) < 2 : return the_rest
+
+        index = forward_slashes[1]
+        return the_rest[0 : index]
+
+    except Exception as e:
+        logging.error("Error parsing url for section:\n%s" % url)
+        return  ''
 
 class LogItem(object):
     def __init__(
@@ -51,13 +73,24 @@ class LogItem(object):
         self.request['resource'] = resource
         self.request['protocol'] = protocol
 
+        self.section = None
+
         self.status = status
         self.size = size
+
+    def __lt__(self, y):
+        return self.get_section() < y.get_section()
+
+    def get_section(self):
+        if self.section: return self.section
+
+        self.section = parse_section(self.request['resource'])
+        return self.section
 
 class LogTail(object):
     def __init__(self, filename):
         self.log = open(filename, 'r')
-        self.line_regex = _build_w3c_regex()
+        self.line_regex = build_w3c_regex()
         self.new_line = None
 
     def _parse_next_line(self):
@@ -74,7 +107,11 @@ class LogTail(object):
 
             # convert status and size strings to ints
             status = int(match.group('status'))
-            size = int(match.group('size'))
+
+            # size might be a string digit or -
+            size = match.group('size')
+            if size == '-': size = 0
+            else: size = int(size)
 
             return LogItem(
                     client=match.group('client'), timestamp=timestamp,
@@ -87,5 +124,4 @@ class LogTail(object):
         while True:
             try: yield self._parse_next_line()
             except Exception as e:
-                logging.error("Encountered error\n\t%s\n\t%s" % (self.new_line,
-                    e))
+                logging.error("Encountered error\n\t%s\n\t%s" % (self.new_line, e))
