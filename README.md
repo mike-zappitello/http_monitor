@@ -11,7 +11,7 @@ To Test: `python3.4 -m unittest test.test`
 
 * Every 10s, display in the console the sections of the web site with the most
   hits (a section is defined as being what's before the second '/' in a URL.
-  i.e.  the section for "http://my.site.com/pages/create' is
+  i.e. the section for "http://my.site.com/pages/create' is
   "http://my.site.com/pages"), as well as interesting summary statistics on the
   traffic as a whole.
 
@@ -74,7 +74,7 @@ comfortable turning it in.
 ### Improvements To Be Made
 
 There are always improvements that can be made to an app. However, I think that
-the architecture works well.  The pattern is pretty straightforward and offers
+the architecture works well. The pattern is pretty straightforward and offers
 sensibly sized, testable units. In general, I think that there are three classes
 of improvements that could be made and one architecture expansion.
 
