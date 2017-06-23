@@ -4,6 +4,7 @@ import unittest
 
 from datetime import datetime as datetime   # lol
 from datetime import timedelta as timedelta 
+from itertools import *
 from queue import Queue as Queue            # lol
 
 from http_monitor import monitor 
@@ -11,7 +12,7 @@ from http_monitor import log_utils
 from http_monitor import display
 
 def LOG(message):
-    if False: print(message)
+    if True: print(message)
 
 class MockLogItemGenerator(object):
     def __init__(self):
@@ -30,7 +31,7 @@ class MockLogItemGenerator(object):
     def next_item(self):
         for time in self.schedule:
             while datetime.now() < time: yield None
-            LOG('item: %s' % time)
+            # LOG('item: %s' % time)
             yield self.generate_item(time)
 
 class MockDisplay(object):
@@ -63,7 +64,6 @@ class MockDisplay(object):
         self.threshold = 1
 
     def set_schedule(self, schedule, threshold, threshold_s):
-        if len(schedule) < threshold: return
 
         length = timedelta(seconds=threshold_s, microseconds=5)
         alert = None
@@ -72,10 +72,10 @@ class MockDisplay(object):
         tail = 0
 
         while head < len(schedule):
-            LOG("[%s]: %s" % (head, schedule[head]))
-            LOG("p - h:%s, t:%s" % (head, tail))
+            # LOG("[%s]: %s" % (head, schedule[head]))
+            # LOG("p - h:%s, t:%s" % (head, tail))
             while schedule[head] - schedule[tail] > length:
-                LOG("w - h:%s, t:%s" % (head, tail))
+                # LOG("w - h:%s, t:%s" % (head, tail))
                 tail += 1
                 if head - 1 - tail < threshold and alert:
                     LOG("alert off - %s" % (schedule[tail] + length))
@@ -95,7 +95,7 @@ class MockDisplay(object):
 
         return 0
 
-        LOG("\ncurrently %s alerts left\n" % self.expected_alerts.qsize())
+        LOG("\start with %s alerts\n" % self.expected_alerts.qsize())
 
     def set_monitor(self, monitor):
         self.monitor = monitor
@@ -127,7 +127,7 @@ class MonitorTest(unittest.TestCase):
         now = datetime.now()
         return [ now + timedelta(seconds=seconds) for seconds in timedeltas ]
 
-    def run_test(self, schedule, threshold, threshold_s):
+    def run_alert_test(self, schedule, threshold, threshold_s):
         self.log_item_generator.set_schedule(schedule)
 
         active_alerts = self.display.set_schedule(
@@ -145,7 +145,7 @@ class MonitorTest(unittest.TestCase):
     def test_monitor(self):
         timedeltas = [ 0, 0, 2, 4, 6, 8, 10, 30 ]
 
-        self.run_test(
+        self.run_alert_test(
             schedule = self.create_schedule(timedeltas), threshold = 5,
             threshold_s = 10)
 
@@ -157,7 +157,7 @@ class MonitorTest(unittest.TestCase):
 
         print(len(timedeltas))
 
-        self.run_test(
+        self.run_alert_test(
             schedule = self.create_schedule(timedeltas), threshold = 5,
             threshold_s = 10)
 
@@ -168,10 +168,21 @@ class MonitorTest(unittest.TestCase):
                 10, 12, 14, 16 ]            # puase and trigger another alert
 
         schedule = self.create_schedule(timedeltas)
-        self.run_test(schedule, threshold=6, threshold_s=6)
+        self.run_alert_test(schedule, threshold=6, threshold_s=6)
 
     def test_for_scale(self):
-        timedeltas =  [ 0 ]
+        def pred(x):
+            if x < 1000: return True
+            elif x < 3000: return False
+            elif x < 4500: return True
+
+        def stop(x): return x < 5000
+
+
+        timedeltas = [ s * 0.015 for s in takewhile(stop, count(1)) if pred(s) ]
+
+        schedule = self.create_schedule(timedeltas)
+        self.run_alert_test(schedule, threshold=100, threshold_s=10)
 
 
 if __name__ == '__main__': unittest.main()
