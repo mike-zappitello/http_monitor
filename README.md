@@ -149,5 +149,5 @@ Good Luck!
 ### Thank You
 
 Thank you for taking the time to review my project. I hope you've found it to be
-of easy to follow. If you have any questions, I can be reached at mzappitell at
+easy to follow. If you have any questions, I can be reached at mzappitell at
 gmail dot com.
