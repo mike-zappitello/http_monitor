@@ -142,9 +142,9 @@ of improvements that could be made and one architecture expansion.
 ### Stumple Uponers
 
 If you happened to stumble upon this project while searching for key words in
-the instructions, you are welcome to my log file in the `test_data` directory,
-but I would hope that you also have the integrity to not copy a third parties
-work without attribution. Good Luck
+the instructions, you are welcome to my log file in the `test_data` directory.
+
+Good Luck!
 
 ### Thank You
 
