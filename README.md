@@ -51,21 +51,22 @@ alerts to a table and update stats shown below the table.
 All source code for the app is stored in the `http_monitor` directory in a
 typical python structure. Unit Tests are provided in the `test` directory. These
 tests are able to run on each component, giving the developer (me!) a chance to
-play with them individually. (A particulary fun rabbit hole to get sucked down is
+play with them individually. (A particularly fun rabbit hole to get sucked down is
 creating a mock log item generator using the itertools library).
 
 ### Notes on Process
 
 Generally, I keep a working branch for any new feature that is being developed.
 This branch is then rebased for clarity in branch `<name>_rebase`. However for
-this project, since I'm the only one touching it,I pushed straight into master.
-As a result, there may be a few lines in a commit that should be in another.
+this project, since I'm the only one touching it, I pushed straight into master.
+As a result, there may be a few lines in a commit that should be in a different
+commit.
 
 I've added comments wherever they felt necessary. For a project with multiple
 people working on it across time, I would normally fully document each function
 to make everything annoyingly clear.
 
-Lastly, with a project like this, its impossible to choose a break off point.
+Lastly, with a project like this, it's impossible to choose a break off point.
 There is always another corner to sand down or a function that could execute
 just a bit faster. I believe I've accomplished the goals set above, so I feel 
 comfortable turning it in.
@@ -101,7 +102,7 @@ of improvements that could be made and one architecture expansion.
       is already done in the `_get_popular_section()` function using the
       `groupby` method.
 
-  ** Anomoly Detection on users, sizes, protocols, and status should be
+  ** Anomaly Detection on users, sizes, protocols, and status should be
       implemented to watch for anything out of the ordinary.
 
   ** An issue can arise when the hits per minute fluctuates around the
@@ -145,5 +146,5 @@ Good Luck!
 ### Thank You
 
 Thank you for taking the time to review my project. I hope you've found it to be
-easy to follow. If you have any questions, I can be reached at mzappitello at
-gmail dot com.
+easy to follow. If you have any questions, I can be reached at
+mzappitello@gmail.com
