@@ -105,7 +105,7 @@ class Monitor(object):
                 self.display.high_traffic_alert()
 
     def update_display(self):
-        self.display.latest_hits= self.stats_list
+        self.display.latest_hits = self.stats_list
         self.display.update_display()
 
     def pre_populate_data(self):
@@ -117,11 +117,7 @@ class Monitor(object):
         while log_item:
             # prepopulate the threshold queue and status list with the log item
             self.pre_populate_threshold(log_item)
-
-            # if the log item occured within our stats window, add it to the
-            # stats list.
-            if log_item.time > self.now - self.display_delta:
-                self.stats_list.append(log_item)
+            self.stats_list.append(log_item)
 
             # then get the next log item
             log_item = next(self.log_item_generator)

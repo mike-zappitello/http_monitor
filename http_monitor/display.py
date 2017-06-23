@@ -1,6 +1,9 @@
 
-from datetime import datetime as datetime # lol
 import curses
+import logging
+
+from datetime import datetime as datetime # lol
+from itertools import *
 
 class Display(object):
 
@@ -79,9 +82,21 @@ class Display(object):
             self.screen.addstr(y, start_x, col4)
 
     def _get_popular_section(self):
-        popularity = { }
-        for url in self.latest_hits:
-            section = "a"
+        if len(self.latest_hits) == 0: return '  (0)'
+
+        # sort the list, group them, and find the max one
+        most_popular = ''
+        largest_size  = 0
+        for item, group in  groupby(sorted(self.latest_hits)):
+            size = len(list(group))
+            if size > largest_size:
+                largest_size = size
+                most_popular = item.get_section()
+
+        return most_popular
+
+    def _get_accumulated_size(self):
+        return sum(li.size for li in self.latest_hits)
 
     def set_monitor(self, monitor):
         self.monitor = monitor 
@@ -106,8 +121,15 @@ class Display(object):
         self.update_display()
 
     def update_display(self):
-        self._add_full_row(self.y + 1, char=" ")
-        self._add_full_row(self.y + 2)
-        self.screen.addstr(self.y + 3, 0, "Time: %s" % datetime.now()) 
-        self.screen.refresh()
+        popular = self._get_popular_section()
+        size = self._get_accumulated_size()
 
+        # clear the bottom of our screen
+        for row in range(1, 6): self._add_full_row(self.y + row, char=" ")
+
+        self._add_full_row(self.y + 2)
+        self.screen.addstr(self.y + 4, 0, "Popular Section: %s" % popular)
+        self.screen.addstr(self.y + 5, 0, "Total Size Downloaded: %s" % size)
+        self.screen.addstr(self.y + 6, 0, "Time: %s" % datetime.now()) 
+
+        self.screen.refresh()
