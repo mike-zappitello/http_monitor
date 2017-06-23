@@ -65,6 +65,11 @@ class MockDisplay(object):
         self.threshold = 1
 
     def set_schedule(self, schedule, threshold, threshold_s):
+        '''
+        Iterates through a schedule of times, using the threshold and the
+        threshold_s (time a threshold is going to be watched for) to create a
+        queue of alerts a monitor is going to be expected to trigger.
+        '''
 
         length = timedelta(seconds=threshold_s, microseconds=5)
         alert = None
@@ -73,10 +78,10 @@ class MockDisplay(object):
         tail = 0
 
         while head < len(schedule):
-            # LOG("[%s]: %s" % (head, schedule[head]))
-            # LOG("p - h:%s, t:%s" % (head, tail))
+            LOG("[%s]: %s" % (head, schedule[head]))
+            LOG("p - h:%s, t:%s" % (head, tail))
             while schedule[head] - schedule[tail] > length:
-                # LOG("w - h:%s, t:%s" % (head, tail))
+                LOG("w - h:%s, t:%s" % (head, tail))
                 tail += 1
                 if head - 1 - tail < threshold and alert:
                     LOG("alert off - %s" % (schedule[tail] + length))

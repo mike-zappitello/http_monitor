@@ -2,6 +2,8 @@
 
 To Run: `python3.4 http_monitor./__main__.py -l <path/to_a/file.log>`
 
+To Test: `python3.4 -m unittest test.test`
+
 ### Instructions:
 
 * Consume an actively written-to w3c-formatted HTTP access log
