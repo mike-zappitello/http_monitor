@@ -5,8 +5,11 @@ import re
 
 from datetime import datetime as datetime # lol
 
+log_dir = os.path.join('logs')
+if not os.path.exists(log_dir): os.makedirs(log_dir)
+
 log_file = os.path.join('logs', 'meta.log')
-logging.basicConfig(filename=log_file, filemode='w')
+logging.basicConfig(filename=log_file, filemode='w+')
 
 def build_w3c_regex():
     # ip addresses consist 4 dot seperated numbers that fall between 0 and 255
